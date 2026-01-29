@@ -1,0 +1,138 @@
+# r-scrna Configuration File
+# Single-cell RNA-seq Automated Analysis Pipeline
+
+# Project Settings
+project:
+  name: "scRNA_analysis"
+  base_dir: "."
+  description: "Automated single-cell RNA-seq analysis pipeline"
+
+# Data Input
+input:
+  data_dir: "data"
+  data_type: "counts"  # Options: counts, seurat_rds, cellranger
+  sample_info: "sample_metadata.csv"  # CSV file with sample information (optional)
+  
+# Species & Reference
+species:
+  name: "human"              # human, mouse
+  genome: "hg38"             # hg19, hg38, mm10, etc.
+  mt_pattern: "^MT-"          # Mitochondrial gene pattern for human ("^mt-" for mouse)
+  ribosomal_pattern: "^RPL|^RPS"  # Ribosomal gene pattern for filtering
+
+# QC Thresholds
+qc:
+  min_cells_per_gene: 3       # Minimum cells expressing a gene
+  min_features_per_cell: 200  # Minimum genes per cell
+  max_features_per_cell: 5000 # Maximum genes per cell (optional, set to NULL to disable)
+  max_mt_pct: 20.0            # Maximum mitochondrial percentage
+  max_ribo_pct: NULL           # Maximum ribosomal percentage (optional)
+  doublet_detection: false    # Enable DoubletFinder for doublet detection (optional)
+
+# Normalization & HVG
+normalization:
+  method: "LogNormalize"     # Options: LogNormalize, SCTransform
+  scale_factor: 10000
+  n_top_genes: 3000
+  vars_to_regress: ["percent.mt", "nCount_RNA"]
+
+# Clustering
+clustering:
+  resolutions: [0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
+  npcs: 30
+  reduction: "pca"           # Options: pca, ica
+  algorithm: "louvain"       # Options: louvain, leiden (for Seurat v5)
+
+# Dimensionality Reduction
+dimensionality_reduction:
+  methods: ["umap", "tsne"]
+  umap:
+    n_neighbors: 30
+    min_dist: 0.3
+  tsne:
+    perplexity: 30
+
+# Differential Expression
+de:
+  test_use: "wilcox"        # Options: wilcox, bimod, MAST, DESeq2 (pseudo-bulk)
+  min_pct: 0.25
+  logfc_threshold: 0.25
+  min_diff_pct: 0.1
+  only_pos: true
+  groups_to_compare: []        # Empty means compare all clusters vs rest
+
+# Annotation
+annotation:
+  method: "auto"             # Options: auto, manual, singler, database
+  marker_db: "human_markers.rds"
+  manual_mapping: {}         # Optional: {"0": "T_cells", "1": "B_cells", ...}
+  singler_db: "HumanPrimaryCellAtlasData"  # For SingleR
+  species_specific_db: "hg38"  # For celldex
+
+# Enrichment Analysis
+enrichment:
+  enabled: true
+  databases: ["GO", "KEGG"]
+  org_db: "org.Hs.eg.db"  # org.Hs.eg.db for human, org.Mm.eg.db for mouse
+  pvalue_cutoff: 0.05
+  p_adjust_method: "BH"
+  qvalue_cutoff: 0.2
+  min_gssize: 10
+  max_gssize: 500
+
+# Optional Modules
+modules:
+  pseudotime:
+    enabled: false
+    method: "monocle3"     # Options: monocle2, monocle3, slingshot
+    root_cluster: NULL
+    
+  cellchat:
+    enabled: false
+    database: "CellChatDB.human"  # or CellChatDB.mouse
+    signaling: ["Secreted Signaling", "ECM-Receptor", "Cell-Cell Contact"]
+    
+  scenic:
+    enabled: false
+    org: "hgnc"               # hgnc for human, mgi for mouse
+    db_dir: "data/cisTarget_databases"
+    
+  rna_velocity:
+    enabled: false
+    mode: "stochastic"        # Options: deterministic, stochastic, dynamical
+    loom_file: NULL           # Path to loom file (required for velocity)
+    
+  cnv:
+    enabled: false
+    method: "infercnv"        # Options: infercnv, copykat, SCEVAN
+    reference_cells: []       # List of reference cell types
+
+# Parallel Computing
+parallel:
+  enabled: true
+  n_cores: 4
+  future_global_max_size: 2000  # in MB
+
+# Output Settings
+output:
+  dir: "outputs"
+  save_intermediate: true
+  intermediate_dir: "outputs/intermediate"
+  report_dir: "outputs/reports"
+  format: ["rds", "csv"]    # Output file formats
+  plot_formats: ["pdf", "png"] # Plot file formats
+  dpi: 300
+
+# Visualization
+visualization:
+  theme: "bw"               # bw, minimal, classic
+  colors: NULL               # NULL uses default ggplot2 colors
+  figure_width: 10
+  figure_height: 8
+  figure_dpi: 300
+
+# Logging
+logging:
+  enabled: true
+  level: "INFO"              # DEBUG, INFO, WARNING, ERROR
+  log_file: "outputs/pipeline.log"

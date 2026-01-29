@@ -1,0 +1,134 @@
+---
+title: "QC Report"
+author: "r-scrna development team"
+date: "`r Sys.Date()`"
+output:
+  openintro::lab_report
+---
+
+# 1. Executive Summary
+
+## Overview
+
+This report summarizes the quality control (QC) metrics and filtering results for the single-cell RNA-seq dataset.
+
+## Analysis Information
+
+- **Project**: `r params$project$name`
+- **Analysis Date**: `r format(Sys.Date(), "%Y-%m-%d")`
+
+## Summary Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Total Cells (Initial)** | `r qc_stats[1, 3]` |
+| **Total Genes (Initial)** | `r qc_stats[2, 4]` |
+| **Mean Features/Cell** | `r qc_stats[3, 3]` |
+| **Median Features/Cell** | `r qc_stats[4, 3]` |
+| **Mean Counts/Cell** | `r qc_stats[5, 3]` |
+| **Median Counts/Cell** | `r qc_stats[6, 3]` |
+| **Mean MT Percentage** | `r qc_stats[7, 3]` |
+| **Median MT Percentage** | `r qc_stats[8, 3]` |
+
+# 2. Filtering Criteria
+
+Applied filtering thresholds based on configuration settings:
+
+| Parameter | Threshold | Description |
+|-----------|----------|-------------|
+| **Min Features/Cell** | `r config$qc$min_features_per_cell` | Minimum genes per cell |
+| **Max Features/Cell** | `r ifelse(is.null(config$qc$max_features_per_cell), "Not set", config$qc$max_features_per_cell)` | Maximum genes per cell (optional) |
+| **Max MT Percentage** | `r config$qc$max_mt_pct` | Maximum mitochondrial percentage |
+
+### Cells Filtered
+
+- **Total Cells (After Filtering)**: `r qc_stats[1, 3]`
+- **Cells Removed**: `r qc_stats[1, 3] - ncol(obj_after)`
+
+```{r, eval=FALSE}
+library(Seurat)
+# Assuming obj_after is the filtered object
+cat("Cells after filtering:", ncol(obj_after), "\n")
+```
+
+# 3. QC Visualizations
+
+## 3.1 Violin Plots
+
+### 3.1.1 Features/Cell Distribution
+
+```{r, eval=FALSE, fig.width=10, fig.height=6}
+library(Seurat)
+VlnPlot(obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), 
+        ncol = 3, pt.size = 0.1) +
+  plot_annotation(title = "QC Metrics Violin Plots")
+```
+
+### 3.1.2 MT Percentage vs UMI Count
+
+```{r, eval=FALSE, fig.width=8, fig.height=6}
+library(Seurat)
+FeatureScatter(obj, feature1 = "percent.mt", feature2 = "nCount_RNA") +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(x = "nCount_RNA", y = "percent.mt", 
+         color = "blue") +
+  theme_bw() +
+  plot_annotation(title = "MT Percentage vs UMI Count")
+```
+
+## 3.2 Data Quality Metrics
+
+### 3.2.1 Before vs After Comparison
+
+| Metric | Before | After |
+|--------|--------|-------|
+| **Total Cells** | `r qc_stats[1, 3]` | `r qc_stats[1, 4]` |
+| **Total Genes** | `r qc_stats[2, 4]` | `r qc_stats[2, 4]`` |
+| **Mean Features/Cell** | `r qc_stats[3, 3]` | `r qc_stats[3, 3]`` |
+| **Mean Counts/Cell** | `r qc_stats[5, 3]` | `r qc_stats[5, 3]` | `r qc_stats[6, 3]` |
+| **Mean MT Percentage** | `r qc_stats[7, 3]` | `r qc_stats[8, 3]` | `r qc_stats[8, 3]`` |
+
+# 4. Filtering Summary
+
+## 4.1 Cell/Gene Filtering
+
+**Low Quality Cells Removed:**
+
+```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+library(Seurat)
+# Assuming cells_removed is a vector of cell barcodes
+cat("Low quality cells removed:", length(cells_removed), "\n")
+```
+
+## 5. Conclusions
+
+Based on the QC metrics and filtering thresholds:
+
+- Data quality is `r ifelse(qc_stats[8, 3] > config$qc$max_mt_pct, "above", "below")` the acceptable MT percentage threshold (`r config$qc$max_mt_pct`%`).
+- `r ncol(qc_stats[1, 3])` cells passed quality control.
+- `r qc_stats[1, 3] - qc_stats[1, 4]` cells were removed due to low quality.
+
+## 6. Recommendations
+
+1. Check data quality - If MT percentage is very high, consider investigating potential sample issues.
+2. Adjust QC thresholds based on your data characteristics.
+3. Review violin plots to identify outliers and consider adjusting filtering parameters.
+4. Consider additional filtering steps if needed.
+
+---
+
+# Appendix: QC Parameters
+
+| Parameter | Value |
+|-----------|-------|--------|
+| **Min Cells/Genes** | `r config$qc$min_cells_per_gene` |
+| **Min Features/Cell** | `r config$qc$min_features_per_cell` |
+| **Max Features/Cell** | `r ifelse(is.null(config$qc$max_features_per_cell), "Not set", config$qc$max_features_per_cell)` |
+| **Max MT Percentage** | `r config$qc$max_mt_pct` |
+| **Doublet Detection** | `r ifelse(config$qc$doublet_detection, "Enabled", "Disabled")` |
+
+## Session Info
+
+```{r, eval=FALSE, echo=FALSE}
+sessionInfo()
+```

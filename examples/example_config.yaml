@@ -1,0 +1,131 @@
+# r-scrna Example Configuration
+# Copy this file to config/config.yaml and modify for your project
+
+project:
+  name: "scRNA_analysis"
+  base_dir: "."
+
+# Data Input
+input:
+  data_dir: "data"
+  data_type: "counts"  # Options: counts, seurat_rds, cellranger
+  sample_info: "sample_metadata.csv"
+
+# Species & Reference
+species:
+  name: "human"
+  genome: "hg38"
+  mt_pattern: "^MT-"
+  ribosomal_pattern: "^RPL|^RPS"
+
+# QC Thresholds
+qc:
+  min_cells_per_gene: 3
+  min_features_per_cell: 200
+  max_features_per_cell: 5000
+  max_mt_pct: 20.0
+  doublet_detection: false
+
+# Normalization & HVG
+normalization:
+  method: "LogNormalize"
+  scale_factor: 10000
+  n_top_genes: 3000
+  vars_to_regress: ["percent.mt"]
+
+# Clustering
+clustering:
+  resolutions: [0.2, 0.4, 0.5, 0.8, 1.0]
+  npcs: 30
+  reduction: "pca"
+  algorithm: "louvain"
+
+# Dimensionality Reduction
+dimensionality_reduction:
+  methods: ["umap"]
+  umap:
+    n_neighbors: 30
+    min_dist: 0.3
+  tsne:
+    perplexity: 30
+
+# Differential Expression
+de:
+  test_use: "wilcox"
+  min_pct: 0.25
+  logfc_threshold: 0.25
+  min_diff_pct: 0.1
+  only_pos: true
+  groups_to_compare: []
+
+# Annotation
+annotation:
+  method: "auto"
+  marker_db: "human_markers.rds"
+  manual_mapping: {}
+  singleR_db: "HumanPrimaryCellAtlasData"
+  species_specific_db: "hg38"
+
+# Enrichment Analysis
+enrichment:
+  enabled: true
+  databases: ["GO", "KEGG"]
+  org_db: "org.Hs.eg.db"
+  pvalue_cutoff: 0.05
+  p_adjust_method: "BH"
+  qvalue_cutoff: 0.2
+  min_gssize: 10
+  max_gssize: 500
+
+# Optional Modules
+modules:
+  pseudotime:
+    enabled: false
+    method: "monocle3"
+  root_cluster: NULL
+  cellchat:
+    enabled: false
+    database: "CellChatDB.human"
+    signaling: ["Secreted Signaling", "ECM-Receptor", "Cell-Cell Contact"]
+  scenic:
+    enabled: false
+    org: "hgnc"
+    db_dir: "data/cisTarget_databases"
+  rna_velocity:
+    enabled: false
+    mode: "stochastic"
+  loom_file: NULL
+  cnv:
+    enabled: false
+    method: "infercnv"
+    reference_cells: []
+
+# Parallel Computing
+parallel:
+  enabled: true
+  n_cores: 4
+  future_global_max_size: 2000
+
+# Output Settings
+output:
+  dir: "outputs"
+  save_intermediate: true
+  intermediate_dir: "outputs/intermediate"
+  report_dir: "outputs/reports"
+  format: ["rds", "csv"]
+  plot_formats: ["pdf", "png"]
+  dpi: 300
+
+# Visualization
+visualization:
+  theme: "bw"
+  colors: null
+  figure_width: 10
+  figure_height: 8
+  figure_dpi: 300
+
+# Logging
+logging:
+  enabled: true
+  level: "INFO"
+  log_file: "outputs/pipeline.log"

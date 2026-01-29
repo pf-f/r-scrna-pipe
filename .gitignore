@@ -1,0 +1,48 @@
+# R-scrna - Data and outputs gitignore
+
+# Ignore all data files
+data/
+!*.fastq.gz
+!*.bam
+!*.bam.bai
+!*.bai
+
+# Ignore output files
+outputs/
+!*.html
+!*.pdf
+!*.png
+!*.csv
+
+# Ignore intermediate files
+outputs/intermediate/
+outputs/reports/*.html
+outputs/reports/*.pdf
+
+# Ignore log files
+*.log
+*.Rhistory
+
+# Ignore R environment files
+.Rproj.user
+.Rhistory
+.RData
+.Rproj.user
+
+# Ignore cache directories
+.cache/
+.vim/
+.Rproj.user
+
+# Ignore compiled output
+src/*.o
+src/*.so
+src/*.sl
+
+# Ignore R packages directories
+packrat/
+!/
+
+# Ignore OS files
+.DS_Store
+.Rproj.user

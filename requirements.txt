@@ -1,0 +1,79 @@
+# R-scrna R Package Requirements
+# Core packages
+Seurat>=5.0
+dplyr>=1.1.4
+tidyr>=1.2.0
+stringr>=1.5.0
+purrr>=1.0.0
+ggplot2>=3.4.0
+patchwork>=1.1.0
+
+# Bioconductor packages
+SingleCellExperiment>=1.18.0
+scater>=1.24.0
+scran>=1.24.0
+biocparallel>=1.38.0
+BiocGenerics>=0.50.0
+S4Vectors>=0.44.0
+GenomicRanges>=1.48.0
+
+# Differential expression
+edgeR>=3.38.0
+limma>=3.54.0
+DESeq2>=1.38.0
+
+# Annotation
+SingleR>=2.0.0
+celldex>=1.4.0
+org.Hs.eg.db>=3.18.0
+org.Mm.eg.db>=3.16.0
+clusterProfiler>=4.10.0
+enrichplot>=1.18.0
+
+# Visualization
+pheatmap>=1.0.12
+ComplexHeatmap>=2.12.0
+circlize>=0.4.14
+RColorBrewer>=1.1-3
+viridis>=0.6.2
+ggsci>=2.0.0
+ggraph>=1.5.0
+
+# Trajectory analysis
+monocle3>=1.3.0
+slingshot>=2.1.0
+
+# Cell communication
+CellChat>=1.6.0
+
+# SCENIC
+SCENIC>=1.3.0
+RcisTarget>=1.8.0
+AUCell>=1.24.0
+GENIE3>=0.12.0
+
+# RNA velocity
+velocyto.R>=0.6
+
+# CNV analysis
+infercnv>=1.12.0
+CopyKAT>=1.1.0
+
+# Configuration/IO
+yaml>=2.3.7
+rjson>=0.2.20
+data.table>=1.14.2
+
+# Reporting
+rmarkdown>=2.24.0
+knitr>=1.42.0
+kableExtra>=1.3.4
+htmltools>=0.5.7
+
+# Utility
+future>=1.33.0
+ggpubr>=0.6.0
+cowplot>=1.1.0
+
+# Development
+testthat>=3.2.0

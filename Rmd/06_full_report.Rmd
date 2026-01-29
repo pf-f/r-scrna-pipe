@@ -1,0 +1,361 @@
+---
+title: "r-scrna Full Analysis Report"
+author: "r-scrna development team"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+# Executive Summary
+
+This report presents a comprehensive analysis of single-cell RNA-seq data using the **r-scrna** automated pipeline.
+
+## Project Information
+
+- **Analysis Date**: `r format(Sys.Date(), "%Y-%m-%d")`
+- **Pipeline Version**: r-scrna v1.0
+- **Species**: `r config$species$name`
+- **Reference Genome**: `r config$species$genome`
+- **Data Type**: `r config$input$data_type`
+
+## Analysis Workflow
+
+```
+00. Input Checks  → 01. Quality Control  → 02. Normalization  → 03. Clustering → 04. Annotation → 05. Differential Expression → 06. Enrichment → [07. Pseudotime] → [08. CellChat] → [09. SCENIC] → [10. RNA Velocity] → [11. CNV] → 09. Report
+```
+
+## Table of Contents
+
+1. [Data Quality](#data-qc-report)
+2. [Clustering](#clustering-report)
+3. [Annotation](#annotation-report)
+4. [Differential Expression](#diffexp-report)
+5. [Enrichment](#enrichment-report)
+6. [Optional Analyses](#optional-report)
+
+---
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(rmarkdown)
+library(patchwork)
+
+# Read configuration
+config <- yaml::read_yaml("config/config.yaml")
+
+# Check which modules were run
+module_run_status <- list(
+  data_qc = file.exists("outputs/inter/qc_filtered.rds"),
+  normalization = file.exists("outputs/inter/normalized.rds"),
+  clustering = file.exists("outputs/inter/clustered.rds"),
+  annotation = file.exists("outputs/inter/annotated.rds"),
+  diffexp = file.exists("outputs/enrichment/de_results.csv"),
+  enrichment = file.exists("outputs/enrichment/enrichment_results.csv"),
+  pseudotime = !is.null(config$modules$pseudotime) || !config$modules$pseudotime$enabled,
+  cellchat = !is.null(config$modules$cellchat) || !config$modules$cellchat$enabled,
+  scenic = !is.null(config$modules$scenic) || !config$modules$scenic$enabled,
+  rna_velocity = !is.null(config$modules$rna_velocity) || !config$modules$rna_velocity$enabled,
+  cnv = !is.null(config$modules$cnv) || !config$modules$cnv$enabled
+)
+)
+
+# Include optional modules only if they were run
+include_optional <- pseudotime || cellchat || scenic || rna_velocity || cnv
+```
+
+---
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+# Read intermediate objects if they exist
+qc_obj <- if (module_run_status$data_qc) readRDS("outputs/inter/qc_filtered.rds")
+norm_obj <- if (module_run_status$normalization) readRDS("outputs/inter/normalized.rds")
+cluster_obj <- if (module_run_status$clustering) readRDS("outputs/inter/clustered.rds")
+annotated_obj <- if (module_run_status$annotation) readRDS("outputs/inter/annotated.rds")
+
+# Read analysis results if available
+de_results <- NULL
+if (module_run_status$diffexp) {
+  de_results <- read.csv("outputs/enrichment/de_results.csv", row.names = 1)
+}
+
+enrichment_results <- NULL
+if (module_run_status$enrichment) {
+  enrichment_results <- read.csv("outputs/enrichment/enrichment_results.csv", row.names = 1)
+}
+```
+
+# Module 1: Data Quality Control
+```{r data-qc-report, child='results="data-qc-report", include=if(module_run_status$data_qc)}
+```
+
+`r if (module_run_status$data_qc) "Read intermediate QC object" else "QC module was not run"`
+
+### Initial Data Statistics
+
+| Metric | Value |
+|--------|--------|
+`r if (module_run_status$data_qc) {
+  qc_stats <- readRDS("outputs/inter/qc_filtered.rds")@metadata$qc_stats
+} else {
+  qc_stats <- data.frame(
+    metric = c("Total Cells", "Total Genes", "Mean Features/Cell", "Median Features/Cell", 
+             "Mean Counts/Cell", "Median Counts/Cell", 
+             "Mean MT Percentage", "Median MT Percentage"),
+    value = c(
+      NA, NA, NA, NA, NA, NA, NA, NA
+    )
+  )
+}
+print(knitr::kable(qc_stats))```
+
+### Filtering Results
+
+| Parameter | Threshold | Cells Filtered |
+|-----------|----------|-------------|
+`r if (module_run_status$data_qc) {
+  config_str <- sprintf("Min Features/Cell: %d, Max Features/Cell: %d, Max MT PCT: %.1f%%", 
+                                 config$qc$min_features_per_cell, 
+                                 config$qc$max_features_per_cell, 
+                                 config$qc$max_mt_pct * 100)
+  print(sprintf(config_str, "", knitr::knit))
+}`
+
+### QC Visualizations
+
+```{r data-qc-report, child='results="data-qc-report", include=if(module_run_status$data_qc)}
+```
+`r if (module_run_status$data_qc) {
+  qc_plots <- readRDS("outputs/inter/qc_filtered.rds")@metadata$qc_plots
+  combined_qc_plots <- qc_plots$combined
+  print(combined_qc_plots)
+}`
+
+---
+
+# Module 2: Clustering
+```{r clustering-report, child='results="clustering-report", include=if(module_run_status$clustering)}
+```
+
+`r if (module_run_status$clustering) "Read intermediate clustering object" else "Clustering module was not run"`
+
+### Clustering Metrics
+
+| Resolution | N Clusters | Mean Silhouette Score |
+|-----------|-----------|-------------|----------------|
+`r if (module_run_status$clustering) {
+  cluster_metrics <- readRDS("outputs/inter/clustered.rds")@metadata$cluster_metrics
+  print(knitr::kable(cluster_metrics))
+}````
+
+### UMAP Visualization
+
+```{r clustering-report, child='results="clustering-report", include=if(module_run_status$clustering)}
+```
+`r if (module_run_status$clustering) {
+  umap_plots <- readRDS("outputs/inter/clustered.rds")@metadata$umap_plots
+  combined_umap <- readRDS("outputs/inter/clustered.rds")@metadata$combined_umap)
+  print(combined_umap)
+}````
+
+---
+
+# Module 3: Annotation
+```{r annotation-report, child='results="annotation-report", include=if(module_run_status$annotation)}
+```
+
+`r if (module_run_status$annotation) "Read intermediate annotated object" else "Annotation module was not run"`
+
+### Cell Type Summary
+
+```{r annotation-report, results="annotation-report", include=if(module_run_status$annotation)}
+`r if (module_run_status$annotation) {
+  cluster_summary <- readRDS("outputs/inter/annotated.rds")@metadata$cluster_summary
+  print(knitr::kable(cluster_summary))
+```
+
+### Marker Genes Summary
+
+```{r annotation-report, results="annotation-report", include=if(module_run_status$annotation)}
+`r if (module_run_status$annotation) {
+  markers <- readRDS("outputs/inter/annotated.rds")@metadata$markers
+  top5_per_cluster <- markers %>%
+    dplyr::group_by(cluster) %>%
+    dplyr::slice_head(n = 5)
+  
+  p <- DoHeatmap(obj, features = top5$gene, 
+             size = 3, group.by = "cell_type",
+             angle = 90, pt.size = 0.5) +
+    plot_annotation(title = "Top 5 Markers per Cluster")
+  print(p)
+}````
+
+---
+
+# Module 4: Differential Expression
+```{r diffexp-report, child='results="diffexp-report", include=if(module_run_status$diffexp)}
+```
+
+`r if (module_run_status$diffexp) "Read DE results" else "DEG module was not run"`
+
+### DEG Summary
+
+| Comparison | Up-regulated Genes | Down-regulated Genes |
+|-----------|-------------------|-------------------|----------------|
+`r if (module_run_status$diffexp) {
+  total_up <- sum(de_results$regulated == "UP")
+  total_down <- sum(de_results$regulated == "Down")
+  
+  df_summary <- data.frame(
+    comparison = de_results$comparison,
+    n_up = sapply(de_results, function(x) nrow(subset(x, regulated == "UP")),
+    n_down = sapply(de_results, function(x) nrow(subset(x, regulated == "Down"))
+  )
+  print(knitr::kable(df_summary))
+}````
+
+### Top Markers by Cluster
+
+```{r diffexp-report, results="diffexp-report", include=if(module_run_status$diffexp)}
+`r if (module_run_status$diffexp) {
+  markers <- readRDS("outputs/inter/annotated.rds")@metadata$markers
+  top5_per_cluster <- markers %>%
+    dplyr::group_by(cluster) %>%
+    dplyr::slice_head(n = 5) %>%
+    dplyr::select(cluster, gene, avg_log2FC)
+  print(knitr::kable(top5_per_cluster))
+}````
+
+### Volcano Plot
+
+```{r diffexp-report, results="diffexp-report", include=if(module_run_status$diffexp)}
+```
+`r if (module_run_status$diffexp) {
+  volcano_p <- readRDS("outputs/enrichment/de_results.rds")@metadata$plots$volcano
+  print(volcano_p)
+}````
+
+### Heatmap of Top Genes
+
+```{r diffexp-report, results="diffexp-report", include=if(module_run_status$diffexp)}
+`r if (module_run_status$diffexp) {
+  de_heatmap <- readRDS("outputs/enrichment/de_results.rds")@metadata$plots$heatmap
+  print(de_heatmap)
+}````
+
+---
+
+# Module 5: Enrichment
+```{r enrichment-report, child='results="enrichment-report", include=if(module_run_status$enrichment)}
+```
+
+`r if (module_run_status$enrichment) "Read enrichment results" else "Enrichment module was not run"`
+
+### GO Enrichment Summary
+
+| Database | Species | P-value Cutoff | Q-value Cutoff | Min Geneset Size | Pathways Enriched |
+|-----------|----------|----------|----------|-------|-----------------------|---------------------|-----------|
+`r if (module_run_status$enrichment) {
+  go_summary <- read.csv("outputs/enrichment/go_summary.csv", row.names = 1)
+  print(knitr::kable(go_summary))
+}````
+
+### KEGG Enrichment Summary
+
+| Database | P-value Cutoff | Q-value Cutoff | Min Geneset Size | Pathways Enriched |
+|-----------|----------|----------|----------|-------|---------------------|-----------|
+`r if (module_run_status$enrichment) {
+  kegg_summary <- read.csv("outputs/enrichment/kegg_summary.csv", row.names = 1)
+  print(knitr::kable(kegg_summary))
+}````
+
+### Enrichment Visualization
+
+```{r enrichment-report, results="enrichment-report", include=if(module_run_status$enrichment)}
+`r if (module_run_status$enrichment) {
+  enrich_plots <- readRDS("outputs/enrichment/enrichment/enrichment_plots")
+  go_bar <- enrich_plots$go_bar
+  kegg_bar <- enrich_plots$kegg_bar
+  go_dot <- enrich_plots$go_dot
+  kegg_dot <- enrich_plots$kegg_dot
+  comparison_p <- enrich_plots$comparison
+  
+  combined_enrichment <- wrap_plots(list(go_bar, kegg_bar, go_dot, kegg_dot))
+  print(combined_enrichment)
+}````
+
+---
+
+# Optional Analyses
+
+```{r optional-report, child='results="optional-report", include=if(include_optional)}
+```
+
+## Module 7: Pseudotime Analysis
+
+`r if (pseudotime) "### 7. Pseudotime Analysis\n" else ""`
+
+```{r optional-report, child='results="optional-report", include=if(pseudotime)}
+```
+`r if (pseudotime) {
+  pseudotime_obj <- readRDS("outputs/inter/pseudotime/pseudotime.rds")
+  print(head(pseudotime_obj))
+}`
+
+---
+
+## Module 8: CellChat Analysis
+
+`r if (cellchat) "### 8. CellChat Analysis\n" else ""`
+
+```{r optional-report, child='results="optional-report", include=if(cellchat)}
+```
+`r if (cellchat) {
+  cellchat_obj <- readRDS("outputs/inter/cellchat/cellchat_obj")
+  print(head(cellchat_obj))
+}````
+
+---
+
+## Module 9: SCENIC Analysis
+
+`r if (scenic) "### 9. SCENIC Analysis\n" else ""`
+
+```{r optional-report, child='results="optional-report', include=if(senic)}
+```
+`r if (scenic) {
+  scenic_obj <- readRDS("outputs/inter/scenic/scenic_obj")
+  print(head(scenic_obj))
+}````
+
+---
+
+## Module 10: RNA Velocity Analysis
+
+`r if (rna_velocity) "### 10. RNA Velocity Analysis\n" else ""`
+
+```{r optional-report, child='results="optional-report', include=if(rna_velocity)}
+```
+`r if (rna_velocity) {
+  velocity_obj <- readRDS("outputs/inter/rna_velocity/rna_velocity_obj")
+  print(head(velocity_obj))
+}````
+
+---
+
+# Module 11: CNV Analysis
+
+`r if (cnv) "### 11. CNV Analysis\n" else ""`
+
+```{r optional-report, child='results="optional-report', include=if(cnv)}
+```
+`r if (cnv) {
+  cnv_obj <- readRDS("outputs/inter/cnv/cnv_obj")
+  print(head(cnv_obj))
+}````
+
+---
+
+# Session Info
+
+```{r optional-report, results="optional-report"}
+```{r}
+sessionInfo()
+```

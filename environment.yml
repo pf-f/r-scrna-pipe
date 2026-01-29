@@ -1,0 +1,54 @@
+name: r-scrna
+channels:
+  - conda-forge
+  - bioconda
+  - r
+  - defaults
+
+dependencies:
+  - r-base>=4.3
+  
+  # Core R packages
+  - r-seurat>=5.0
+  - r-dplyr>=1.1
+  - r-tidyr>=1.2
+  - r-ggplot2>=3.4
+  - r-patchwork>=1.1
+  
+  # Bioconductor packages
+  - bioconductor-singlecellexperiment>=1.18
+  - bioconductor-scater>=1.24
+  - bioconductor-scran>=1.28
+  - bioconductor-biocparallel>=1.38
+  - bioconductor-biocgenerics>=0.50
+  - bioconductor-s4vectors>=0.44
+  
+  # Annotation packages
+  - r-singler>=2.0
+  - r-celldex>=1.4
+  - r-biocmanager>=1.30
+  
+  # Visualization packages
+  - r-pheatmap>=1.0
+  - r-complexheatmap>=2.12
+  - r-circlize>=0.4
+  - r-rcolorbrewer>=1.1
+  - r-viridis>=0.6
+  - r-ggsci>=2.0
+  
+  # Configuration/IO packages
+  - r-yaml>=2.3
+  - r-rjson>=0.2
+  - r-data.table>=1.14
+  
+  # Reporting packages
+  - r-rmarkdown>=2.24
+  - r-knitr>=1.42
+  - r-kableextra>=1.3
+  
+  # Python dependencies (for optional tools)
+  - python=3.9
+  - pip
+  - pip:
+    - scvelo>=0.3.0
+    - velocyto>=0.17

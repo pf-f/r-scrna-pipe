@@ -1,0 +1,128 @@
+---
+title: "Clustering Report"
+author: "r-scrna development team"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+# Clustering Report
+
+## Overview
+
+This report summarizes the clustering analysis performed at multiple resolutions to identify optimal cell clusters.
+
+## Analysis Information
+
+- **Analysis Date**: `r format(Sys.Date(), "%Y-%m-%d")`
+- **Pipeline Version**: r-scrna v1.0
+
+## Clustering Parameters
+
+| Parameter | Value | Description |
+|-----------|--------|-------------|
+| Resolutions Tested | `r params$clustering$resolutions` | Clustering resolutions evaluated |
+| Algorithm | `r params$clustering$algorithm` | Clustering algorithm used |
+| PC Dimensions | `r pcs_to_use` | Number of principal components used |
+| Reduction | `r reduction` | Dimensionality reduction method |
+
+## Clustering Metrics
+
+```{r, eval=FALSE, echo=FALSE}
+library(Seurat)
+library(dplyr)
+library(patchwork)
+library(knitr)
+
+# Assuming cluster_metrics and params are available from previous analysis
+# This would be populated by the actual pipeline run
+```
+
+### Resolution-wise Cluster Counts
+
+| Resolution | Number of Clusters | Mean Cells/Cluster | Std Cells/Cluster |
+|-----------|---------------------|------------------|------------------|
+`r table(cluster_metrics$resolution, cluster_metrics$n_clusters) %>% 
+  kable(format = "markdown")```
+
+### Overall Cluster Distribution
+
+```{r, eval=FALSE, echo=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+
+# Assuming cluster_summary from annotation module is available
+cluster_props <- calc_cluster_props(obj, "cell_type")
+
+ggplot(cluster_props, aes(x = cell_type, y = proportion, fill = cell_type)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+  legend.position = "bottom") +
+  labs(title = "Cell Type Proportions", 
+         x = "", 
+         y = "Proportion")
+)
+```
+
+### Clustering Quality Assessment
+
+```{r, eval=FALSE, echo=FALSE}
+library(Seurat)
+library(patchwork)
+
+# Assuming cluster_metrics from clustering module is available
+# This would show metrics like silhouette scores, clumpiness scores, etc.
+```
+
+## Clustering Recommendations
+
+Based on the analysis, the following clustering resolution is recommended:
+
+- **Optimal Resolution**: `r params$clustering$resolutions[which.max(cluster_metrics$n_clusters[which.max(cluster_metrics$silhouette_score)))]`
+- **Alternative**: `r params$clustering$resolutions[2]` (Second best resolution)
+
+## Cluster Comparison Across Resolutions
+
+### Pairwise Jaccard Similarity
+
+```{r, eval=FALSE, echo=FALSE}
+library(dplyr)
+
+# Assuming multiple clustering results at different resolutions
+# Calculate Jaccard similarity between clusterings
+
+# This would show how stable clusters are across different resolutions
+```
+
+## Visualization: UMAP at Different Resolutions
+
+```{r, eval=FALSE, echo=FALSE}
+library(Seurat)
+library(patchwork)
+
+# Assuming we have Seurat object with multiple cluster assignments
+for (res in params$clustering$resolutions) {
+  cluster_col <- paste0("RNA_snn_res.", res)
+  obj <- SetIdent(obj, value = cluster_col)
+  
+  p <- DimPlot(obj, reduction = "umap", group.by = cluster_col, label = TRUE, 
+            label.size = 6, pt.size = 0.5, cols = get_colors()) +
+    labs(title = paste0("UMAP at Resolution ", res), 
+         subtitle = "Cells: ", ncol(obj))) +
+    print(p)
+}
+```
+
+## Resolution Selection Guidance
+
+- **High Resolution** (e.g., 1.0): More fine-grained clusters, suitable for detecting subtle subpopulations
+- **Medium Resolution** (e.g., 0.4-0.6): Balanced between granularity and stability
+- **Low Resolution** (e.g., 0.8): More coarse clusters, suitable for major cell types
+
+## Session Info
+
+```{r, echo=FALSE}
+sessionInfo()
+```

@@ -1,0 +1,114 @@
+---
+title: "Annotation Report"
+author: "r-scrna development team"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+# Annotation Report
+
+## Overview
+
+This report summarizes cell type annotation results, including marker genes and cell type proportions.
+
+## Analysis Information
+
+- **Analysis Date**: `r format(Sys.Date(), "%Y-%m-%d")`
+- **Pipeline Version**: r-scrna v1.0
+- **Species**: `r config$species$name`
+- **Genome**: `r config$species$genome`
+- **Annotation Method**: `r config$annotation$method`
+
+## Cell Type Statistics
+
+### Cluster Summary Table
+
+`r kable(cluster_summary)`
+
+### Cell Type Proportions
+
+```{r, echo=FALSE, fig.width=10, fig.height=6}
+ggplot(cluster_props, aes(x = cell_type, y = proportion, fill = cell_type)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12)) +
+  labs(x = "", y = "Proportion") +
+  plot_annotation(title = "Cell Type Proportions")
+```
+
+## Marker Genes
+
+### All Cluster Markers
+
+```{r, echo=FALSE}
+top_n_markers <- 10
+
+# Extract top markers for each cluster
+top_markers_list <- list()
+for (cluster in unique(markers$cluster)) {
+  cluster_markers <- markers %>%
+    dplyr::filter(cluster == !!cluster) %>%
+      dplyr::arrange(desc = avg_log2FC) %>%
+      dplyr::slice_head(n = top_n_markers)
+  top_markers_list[[cluster]] <- cluster_markers$gene
+}
+
+# Combine into data frame
+all_top_markers <- dplyr::rbind_list(top_markers_list)
+
+# Display as table
+if (nrow(all_top_markers) > 0) {
+  kable(all_top_markers)
+}
+```
+
+### Cell Type-Specific Markers
+
+```{r, echo=FALSE}
+# Get markers for each cell type
+cell_type_markers <- list()
+for (cell_type in unique(markers$cell_type)) {
+  type_markers <- markers %>%
+    dplyr::filter(cell_type == !!cell_type) %>%
+      dplyr::arrange(desc = avg_log2FC) %>%
+      dplyr::slice_head(n = top_n_markers)
+  cell_type_markers[[cell_type]] <- type_markers$gene
+}
+
+# Display as table by cell type
+if (length(cell_type_markers) > 0) {
+  cat("Cell Type-Specific Markers:\n\n")
+  for (ct in names(cell_type_markers)) {
+    cat("\n", ct, ":\n")
+    print(kable(head(cell_type_markers[[ct]], n = 10))
+  }
+}
+```
+
+## Visualization
+
+### UMAP with Annotations
+
+```{r, echo=FALSE, fig.width=10, fig.height=8}
+p1 <- DimPlot(obj, reduction = "umap", group.by = "cell_type", 
+             label = TRUE, label.size = 6, pt.size = 0.5) +
+             cols = get_colors())
+
+p2 <- DimPlot(obj, reduction = "umap", group.by = "seurat_clusters", 
+             label = TRUE, label.size = 6, pt.size = 0.5, 
+             cols = get_colors())
+
+p3 <- FeaturePlot(obj, features = top10_genes, 
+                  group.by = "cell_type", pt.size = 0.3) +
+             cols = get_colors())
+
+combined <- (p1 + p2) / p3
+print(combined)
+```
+
+## Session Info
+
+```{r, echo=FALSE}
+sessionInfo()
+```

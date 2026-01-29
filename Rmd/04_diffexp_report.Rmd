@@ -1,0 +1,225 @@
+---
+title: "Differential Expression Report"
+author: "r-scrna development team"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+# Executive Summary
+
+## Analysis Overview
+
+Differential expression analysis was performed to identify genes that are differentially expressed between groups.
+
+## Analysis Parameters
+
+| Parameter | Value |
+|-----------|--------|
+| **Test Used** | `r params$de$test_use` |
+| **Minimum P-value** | `r params$de$pvalue_cutoff` |
+| **Log2FC Threshold** | `r params$de$logfc_threshold` |
+| **Minimum PCT** | `r params$de$min_pct` |
+| **Only Positive** | `r params$de$only_pos` |
+
+## Comparison Summary
+
+### Number of Comparisons Performed: `r length(de_results)`
+
+### Groups Analyzed: `r paste(groups_analyzed, collapse = ", ")`
+
+### Up-regulated Genes
+
+| Cluster | Down-regulated Genes |
+|---------|-------------------|
+`r sapply(de_results, function(x) { sum(x$avg_log2FC > 0) })` | `r sapply(de_results, function(x) { sum(x$avg_log2FC < 0) })` `
+
+### Top DEG Count by Cluster
+
+| Cluster | Total DEGs | Up | Down |
+|---------|----------|------|
+`r bind_rows(de_results, de_results %>% 
+      dplyr::group_by(cluster) %>%
+      dplyr::summarise(Total_DEGs = n(), Up = n_up, Down = n_down, .groups = "cluster")) %>%
+      arrange(desc(Total_DEGs)) %>%
+      kable(caption = "Top DEG Count by Cluster")
+  `
+
+---
+
+# Visualization: Volcano Plot
+
+## Volcano Plot
+
+The volcano plot shows significance (adjusted p-value) vs log2 fold change for each comparison.
+
+## Top Table: Top Differentially Expressed Genes
+
+```{r}
+top20_all <- de_results %>% 
+  dplyr::arrange(desc = abs(avg_log2FC)) %>%
+  slice_head(n = 20) %>%
+  dplyr::mutate(
+    Regulation = dplyr::case_when(
+      avg_log2FC > 0 ~ "Up",
+      avg_log2FC < 0 ~ "Down"
+    ),
+    significance = dplyr::case_when(
+      p_val_adj < params$de$pvalue_cutoff ~ "Significant",
+      TRUE ~ "NS"
+    )
+  )
+
+kable(top20_all, caption = "Top 20 DEGs (All Comparisons Combined)", 
+      digits = 4,
+      format = "markdown")
+```
+
+## Top Table: Top Up-regulated Genes
+
+```{r}
+top20_up <- de_results %>% 
+  dplyr::filter(avg_log2FC > 0) %>%
+  dplyr::arrange(desc = desc(avg_log2FC)) %>%
+  slice_head(n = 20)
+
+kable(top20_up, caption = "Top 20 Up-regulated Genes", 
+      digits = 4,
+      format = "markdown")
+```
+
+## Top Table: Top Down-regulated Genes
+
+```{r}
+top20_down <- de_results %>% 
+  dplyr::filter(avg_log2FC < 0) %>%
+  dpr::arrange(desc = desc(avg_log2FC)) %>%
+  slice_head(n = 20)
+
+kable(top20_down, caption = "Top 20 Down-regulated Genes", 
+      digits = 4,
+      format = "markdown")
+```
+
+---
+
+# MA Plot
+
+## MA Plot
+
+The MA plot shows the relationship between mean expression and fold change.
+
+## Heatmap: Top DEG Heatmap
+
+Heatmap showing expression of top DEGs.
+
+```{r, fig.width=12, fig.height=8, fig.align='center'}
+if (exists("de_heatmap_data") {
+  de_heatmap_data <- de_heatmap_data
+} else {
+  # Get top 50 DEGs
+  all_degs <- de_results %>% dplyr::arrange(desc = abs(avg_log2FC)) %>% slice_head(n = 50)
+  
+  # Get expression data
+  expr_data <- GetAssayData(obj, slot = "scale.data")[rev(all_degs$gene), ]
+  
+  # Create annotation
+  anno_df <- data.frame(
+    Cluster = all_degs$cluster,
+    Regulation = dplyr::case_when(
+      avg_log2FC > 0 ~ "Up",
+      avg_log2FC < 0 ~ "Down",
+      TRUE ~ "NS"
+    )
+  )
+  
+  # Plot heatmap
+  pheatmap(
+    as.matrix(expr_data),
+    cluster_rows = FALSE,
+    cluster_cols = FALSE,
+    show_colnames = FALSE,
+    show_rownames = FALSE,
+    annotation_row = anno_row,
+    cluster_cols = c("Up" = "#E41A36", "Down" = "#3366CC"),
+    cluster_col = "Cluster",
+    border_color = "white",
+    fontsize = 8,
+    show_colnames = FALSE,
+    scale = "row"
+  )
+}
+```
+
+## Cluster Comparison Heatmap
+
+Heatmap comparing DEGs between clusters.
+
+---
+
+# Enrichment Analysis
+
+## GO Enrichment
+
+### Summary Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Total GO Terms Found** | `r nrow(ego@result)` |
+| **Significant Terms (adj.p < `params$enrichment$pvalue_cutoff`)** | `r sum(ego@result$p.adjust < params$enrichment$pvalue_cutoff)` |
+| **Up-regulated GO Terms** | `r sum(ego@result$p.adjust < params$enrichment$pvalue_cutoff & ego@result$logFC > 0)` |
+| **Down-regulated GO Terms** | `r sum(ego@result$p.adjust < params$enrichment$pvalue_cutoff & ego@result$logFC < 0)` |
+
+### GO Enrichment Results
+
+```{r}
+kable(ego@result[1:min(20, nrow(ego@result)), 
+      caption = "GO Enrichment Results (Top 20)",
+      digits = 4,
+      format = "markdown")
+  `
+
+# GO Plot
+go_bar <- create_go_barplot(ego, n_terms = 20, config)
+print(go_bar)
+```
+
+## KEGG Enrichment
+
+### Summary Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Total KEGG Pathways Found** | `r nrow(kegg@result)` |
+| **Significant Pathways (adj.p < `params$enrichment$pvalue_cutoff`)** | `r sum(kegg@result$p.adjust < params$enrichment$pvalue_cutoff)` |
+| **Up-regulated Pathways** | `r sum(kegg@result$p.adjust < params$enrichment$pvalue_cutoff & kegg@result$logFC > 0)` |
+| **Down-regulated Pathways** | `r sum(kegg@result$p.adjust < params$enrichment$pvalue_cutoff & kegg@result$logFC < 0)` |
+
+### KEGG Enrichment Results
+
+```{r}
+kable(kegg@result[1:min(20, nrow(kegg@result)), 
+      caption = "KEGG Enrichment Results (Top 20)",
+      digits = 4,
+      format = "markdown"
+  `
+
+# KEGG Plot
+kegg_bar <- create_kegg_barplot(kegg, n_terms = 20, config)
+print(kegg_bar)
+```
+
+## Enrichment Comparison
+
+```{r, eval=FALSE}
+if (exists("go_enrichment_comparison")) {
+  print(go_enrichment_comparison)
+}
+```
+
+---
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
